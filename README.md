@@ -205,6 +205,137 @@
 
 
 
+### Dealing with a Stream-base Transport - 如何在流式传输中处理fragmentation issue
+
+> 从上面的时间服务器端中进行思考，一个时间在发送时可能会被拆分成多个字节数组，而在连续发送两个独立的时间package后，客户端收到的不是两个message而是a bunch of bytes
+
+#### 解决方案1
+
+> 在Handler的生命周期中维护一个ByteBuf变量
+>
+> 1.在handlerAdded中初始化这个ByteBuf，将其大小设定为一个完整数据包的长度
+>
+> 2.在handlerRemoved中释放这个ByteBuf的内存
+>
+> 3.在channelRead中使用维护的ByteBuf变量读取channelRead参数中的msg，释放msg的内存
+>
+> 4.判断ByteBuf变量的readableBytes()返回值是否满足一个完整时间信息的长度，在if判断中做真正的业务逻辑处理
+>
+> ```java
+> public class TimeServerHandlerV1 extends ChannelInboundHandlerAdapter {
+> 
+>     private ByteBuf buf;
+> 
+>     @Override
+>     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+>         // define a ByteBuf to cumulate received data
+>         buf = ctx.alloc().buffer(4);
+>     }
+> 
+>     @Override
+>     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+>         buf.release();
+>         buf = null;
+>     }
+> 
+>     @Override
+>     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+>         ByteBuf b = (ByteBuf) msg;
+>         buf.readBytes(b);
+>         b.release();
+> 
+>         if (buf.readableBytes() >= 4) {
+>             long currentTimeMillis = (buf.readUnsignedInt() - 2208988800L) * 1000L;
+>             System.out.println(new Date(currentTimeMillis));
+>             //ctx.close();
+>         }
+>     }
+> 
+> 
+>     @Override
+>     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+>         cause.printStackTrace();;
+>         ctx.close();
+>     }
+> }
+> ```
+>
+> 修改ServerHandler的代码为writeAndFlush两次
+>
+> 
+>
+> 
+
+
+
+#### 解决方案2
+
+> 对于TimeClient来说解决方案1可以解决定长数据的问题，但对于a variable length field来说，ChannelInboundHanlder的实现将变得unmaintainable
+>
+> ByteToMessageDecoder是ChannelInboundHandler的实现类，可以更好的处理fragmentation issue
+>
+> ByteToMessageDecoder在调用decode()时会使用一个内部用来积累接收到数据的buffer
+>
+> 可以在decode()中决定是否向out中添加，这取决于cumulative buffer中是否有足够的数据
+>
+> 当有新的数据被接收时ByteToMessageDecoder会再次调用decode()
+>
+> 当decode()向out中添加了一个Object，就意味着decoder已经成功decode了一个message
+
+
+
+> 有段话理解不了
+>
+> ByteToMessageDecoder will discard the read part of the cumulative buffer. Please remember that you don't need to decode multiple messages. ByteToMessageDecoder will keep calling the decode() method until it adds nothing to out.
+>
+> 大概理解了，意思就是每次这个decode只处理一个message，它会重复调用decode直到一个message都不能添加到out中去
+>
+> 
+>
+> 我的TimeDecoder类
+>
+> ```java
+> public class TimeDecoder extends ByteToMessageDecoder {
+>     @Override
+>     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+>         if(in.readableBytes() < 4){
+>             return;
+>         }
+>         out.add(in.readBytes(4));
+>     }
+> }
+> ```
+>
+> 使用方案2时的TimeClient修改部分代码
+>
+> ```java
+>             b.handler(new ChannelInitializer<SocketChannel>() {
+>                 @Override
+>                 protected void initChannel(SocketChannel socketChannel) throws Exception {
+>                     ChannelPipeline p = socketChannel.pipeline();
+>                     p.addLast(new TimeDecoder(), new TimeClientHandler());
+>                 }
+>             });
+> ```
+>
+> 
+
+
+
+### Speaking in POJO instead of ByteBuf
+
+.....
+
+
+
+
+
+
+
+
+
+
+
 
 
 
