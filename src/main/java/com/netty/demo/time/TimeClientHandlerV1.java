@@ -3,6 +3,7 @@ package com.netty.demo.time;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Date;
 
@@ -13,6 +14,7 @@ import java.util.Date;
  * @Description TimeServerHandlerV1
  * @Version 1.0
  */
+@Slf4j
 public class TimeClientHandlerV1 extends ChannelInboundHandlerAdapter {
 
     private ByteBuf buf;
@@ -34,7 +36,7 @@ public class TimeClientHandlerV1 extends ChannelInboundHandlerAdapter {
         ByteBuf b = (ByteBuf) msg;
         buf.writeBytes(b);
         b.release();
-
+        log.info("invoke channelRead");
         if (buf.readableBytes() >= 4) {
             long currentTimeMillis = (buf.readUnsignedInt() - 2208988800L) * 1000L;
             System.out.println(new Date(currentTimeMillis));
