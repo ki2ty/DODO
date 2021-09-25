@@ -2,6 +2,7 @@ package com.netty.edu.day2;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
+import io.netty.channel.group.ChannelGroupFuture;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.string.StringEncoder;
@@ -59,6 +60,8 @@ public class EventLoopClient {
             @Override
             public void operationComplete(ChannelFuture channelFuture) throws Exception {
                 log.info("channel is closed");
+                Future<?> future = group.shutdownGracefully();
+
             }
         });
 
