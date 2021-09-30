@@ -21,7 +21,7 @@
     <!-- 按照每天生成日志文件 -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <!-- 当前活动日志文件名：用日期命名 -->
-        <file>${LOG_FILE_LOCATION}/${LOG_FILE_NAME}%d{yyyy-MM-dd}.log</file>
+        <file>${LOG_FILE_LOCATION}/${LOG_FILE_NAME}.log</file>
         <!-- 文件滚动策略根据%d{patter}中的“patter”而定，此处为每天产生一个文件 -->
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- 归档文件名“.zip或.gz结尾”,表示归档文件自动压缩 -->
@@ -44,7 +44,7 @@
         <appender-ref ref="STDOUT"/>
     </logger>
 
-    <root level="INFO">
+    <root level="DEBUG">
         <appender-ref ref="STDOUT" />
 <!--        <appender-ref ref="FILE" />-->
     </root>

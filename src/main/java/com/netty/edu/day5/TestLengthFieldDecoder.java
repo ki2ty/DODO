@@ -7,6 +7,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * @ClassName TestLengthFieldDecoder
@@ -15,10 +16,11 @@ import io.netty.handler.logging.LoggingHandler;
  * @Description TestLengthFieldDecoder
  * @Version 1.0
  */
+@Slf4j
 public class TestLengthFieldDecoder {
 
     public static void main(String[] args) {
-
+        log.info("start");
         EmbeddedChannel channel = new EmbeddedChannel();
         ChannelPipeline p = channel.pipeline();
         p.addLast(new LengthFieldBasedFrameDecoder(1024,0,4,1,4));
