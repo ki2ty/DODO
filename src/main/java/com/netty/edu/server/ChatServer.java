@@ -10,6 +10,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.timeout.IdleStateHandler;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -34,6 +35,8 @@ public class ChatServer {
         GroupJoinRequestMessageHandler groupJoinRequestMessageHandler = new GroupJoinRequestMessageHandler();
         GroupMembersRequestMessageHandler groupMembersRequestMessageHandler = new GroupMembersRequestMessageHandler();
         GroupQuitRequestMessageHandler groupQuitRequestMessageHandler = new GroupQuitRequestMessageHandler();
+        ClientQuitHandler clientQuitHandler = new ClientQuitHandler();
+        HeartBeatMessageHandler heartBeatMessageHandler = new HeartBeatMessageHandler();
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(boss, worker)
@@ -42,9 +45,13 @@ public class ChatServer {
                         @Override
                         protected void initChannel(SocketChannel socketChannel) throws Exception {
                             ChannelPipeline p = socketChannel.pipeline();
-                            p.addLast(LOGGING_HANDLER);
                             p.addLast(new ProtocolFrameDecoder());
                             p.addLast(messageCodec);
+                            p.addLast(LOGGING_HANDLER);
+                            //判断读写空闲时间过长
+                            p.addLast(new IdleStateHandler(0, 0, 0));
+                            //同时作为入栈和出栈处理器
+                            p.addLast(new ServerChannelDuplexHandler());
                             p.addLast(loginRequestMessageHandler);
                             p.addLast(chatRequestMessageHandler);
                             p.addLast(groupChatRequestMessageHandler);
@@ -52,6 +59,8 @@ public class ChatServer {
                             p.addLast(groupJoinRequestMessageHandler);
                             p.addLast(groupMembersRequestMessageHandler);
                             p.addLast(groupQuitRequestMessageHandler);
+                            p.addLast(clientQuitHandler);
+                            p.addLast(heartBeatMessageHandler);
                         }
                     });
             ChannelFuture f = b.bind(8081).sync();

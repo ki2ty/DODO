@@ -1,6 +1,7 @@
 package com.netty.edu.server.session;
 
 import io.netty.channel.Channel;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @Description SessionMemoryImpl
  * @Version 1.0
  */
+@Slf4j
 public class SessionMemoryImpl implements Session {
 
     private Map<String, Channel> userChannelMap = new ConcurrentHashMap<>();
@@ -26,11 +28,17 @@ public class SessionMemoryImpl implements Session {
         channelAttributesMap.put(channel, new ConcurrentHashMap<>());
     }
 
+
+
     @Override
     public void unbind(Channel channel) {
         String userName = channelUserMap.remove(channel);
-        userChannelMap.remove(userName);
-        channelAttributesMap.remove(channel);
+        if(userName != null){
+            userChannelMap.remove(userName);
+            channelAttributesMap.remove(channel);
+        }else{
+            log.debug("未登录的客户端进行unbind");
+        }
     }
 
     @Override
@@ -48,5 +56,10 @@ public class SessionMemoryImpl implements Session {
     @Override
     public Channel getChannel(String userName) {
         return userChannelMap.get(userName);
+    }
+
+    @Override
+    public String getUser(Channel channel) {
+        return channelUserMap.get(channel);
     }
 }

@@ -4,6 +4,7 @@ import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @ClassName GroupSessionMemoryImpl
@@ -15,7 +16,7 @@ import java.util.*;
 @Slf4j
 public class GroupSessionMemoryImpl implements GroupSession {
 
-    private final Map<String, Group> groupMap = new HashMap<>();
+    private final Map<String, Group> groupMap = new ConcurrentHashMap<>();
 
 
     @Override
@@ -31,11 +32,12 @@ public class GroupSessionMemoryImpl implements GroupSession {
 
     @Override
     public Group joinMember(String name, String userName) {
-        if (!groupMap.containsKey(name)) {
+        if (groupMap.containsKey(name)) {
             Group group = groupMap.get(name);
             Set<String> members = group.getMembers();
             if (members.contains(userName)) {
                 //重复加入群
+                log.debug("members contains {}", userName);
                 return null;
             }
             members.add(userName);
@@ -43,7 +45,7 @@ public class GroupSessionMemoryImpl implements GroupSession {
             groupMap.put(name, group);
             return group;
         }
-
+        log.debug("groupMap not contains {}", name);
         return null;
     }
 

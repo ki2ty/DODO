@@ -27,7 +27,6 @@ public class GroupChatRequestMessageHandler extends SimpleChannelInboundHandler<
     @Override
     protected void channelRead0(ChannelHandlerContext channelHandlerContext, GroupChatRequestMessage groupChatRequestMessage) throws Exception {
         GroupSession groupSession = GroupSessionFactory.getGroupSession();
-        Session session = SessionFactory.getSession();
         List<Channel> membersChannel = groupSession.getMembersChannel(groupChatRequestMessage.getGroupName());
         if (membersChannel == null) {
             log.debug("group not exist");
