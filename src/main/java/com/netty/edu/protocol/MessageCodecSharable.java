@@ -1,5 +1,6 @@
 package com.netty.edu.protocol;
 
+import com.netty.edu.conf.Config;
 import com.netty.edu.message.Message;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
@@ -7,10 +8,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.List;
 
 /**
@@ -33,7 +30,7 @@ public class MessageCodecSharable extends MessageToMessageCodec<ByteBuf, Message
         byteBuf.writeInt(1);
 
         //  3.4字节的序列化方式      jdk 0   json 1
-        byteBuf.writeInt(0);
+        byteBuf.writeInt(Config.getSerializerAlgorithms().ordinal());
 
         //  4.4字节的指令类型
         byteBuf.writeInt(message.getMessageType());
@@ -42,10 +39,12 @@ public class MessageCodecSharable extends MessageToMessageCodec<ByteBuf, Message
         byteBuf.writeInt(message.getSequenceId());
 
         //  6.获取正文长度
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(bos);
-        oos.writeObject(message);
-        byte[] bytes = bos.toByteArray();
+//        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+//        ObjectOutputStream oos = new ObjectOutputStream(bos);
+//        oos.writeObject(message);
+//        byte[] bytes = bos.toByteArray();
+        byte[] bytes = Config.getSerializerAlgorithms().serializer(message);
+
 
         //  7.4字节正文长度
         byteBuf.writeInt(bytes.length);
@@ -68,8 +67,8 @@ public class MessageCodecSharable extends MessageToMessageCodec<ByteBuf, Message
         int version = byteBuf.readInt();
         //序列化方式
         int serializerType = byteBuf.readInt();
-        //指令类型
-        int operationType = byteBuf.readInt();
+        //消息类型
+        int messageType = byteBuf.readInt();
         //请求序号
         int requestSeq = byteBuf.readInt();
         //正文长度
@@ -79,14 +78,17 @@ public class MessageCodecSharable extends MessageToMessageCodec<ByteBuf, Message
         //读正文
         byte[] content = new byte[length];
         byteBuf.readBytes(content, 0, length);
-        if (serializerType == 0) {
-            //jdk的序列化
-            ByteArrayInputStream bis = new ByteArrayInputStream(content);
-            ObjectInputStream ois = new ObjectInputStream(bis);
-            Message message = (Message) ois.readObject();
-            log.debug("finish decode: {},{},{},{},{},{}", magicNum, version, serializerType, operationType, requestSeq, length);
-            log.debug("message: {}", message.toString());
-            list.add(message);
-        }
+        //jdk的序列化
+//        ByteArrayInputStream bis = new ByteArrayInputStream(content);
+//        ObjectInputStream ois = new ObjectInputStream(bis);
+        //算法
+        Serializer.Algorithms algorithms = Serializer.Algorithms.values()[serializerType];
+        //确定消息类型
+        Class<?> messageClass = Message.getMessageClass(messageType);
+        Object message = algorithms.deserializer(messageClass, content);
+        log.debug("finish decode: {},{},{},{},{},{}", magicNum, version, serializerType, messageType, requestSeq, length);
+        log.debug("message: {}", message.toString());
+        list.add(message);
+
     }
 }
